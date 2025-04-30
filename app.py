@@ -1,22 +1,26 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-import psycopg2
-import psycopg2.extras
+import sqlite3
 from datetime import datetime
 from datetime import date
 import json
-from veritabani import tablo_olustur
+import psycopg2
+import psycopg2.extras
+from dotenv import load_dotenv
+load_dotenv()
 
-# En üstte bu fonksiyonu çağır:
-tablo_olustur()
+
+
+
 
 app = Flask(__name__)
 app.secret_key = 'gizli_anahtar'
-DB_PATH = 'data.db'
 
 def get_db_connection():
-    conn = psycopg2.connect(os.environ['DATABASE_URL'], cursor_factory=psycopg2.extras.RealDictCursor)
+    db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        raise Exception("DATABASE_URL ortam değişkeni tanımlı değil!")
+    conn = psycopg2.connect(db_url, cursor_factory=psycopg2.extras.RealDictCursor)
     return conn
-
 
 @app.route('/')
 def index():
@@ -31,6 +35,7 @@ def login():
         cur = conn.cursor()
         cur.execute('SELECT * FROM users WHERE username = %s AND password = %s', (username, password))
         user = cur.fetchone()
+        cur.close()
         conn.close()
         if user:
             session['username'] = user['username']
@@ -48,54 +53,32 @@ def dashboard():
 
     username = session['username']
     selected_date = request.form.get('tarih') if request.method == 'POST' else date.today().isoformat()
-
     conn = get_db_connection()
+    cur = conn.cursor()
 
-    # Günlük ve toplam mesaj
-    mesajlar = conn.execute('''
-        SELECT * FROM messages
-        WHERE username = ? AND tarih = ?
-        ORDER BY project ASC
-    ''', (username, selected_date)).fetchall()
+    cur.execute('SELECT * FROM messages WHERE username = %s AND tarih = %s ORDER BY project ASC', (username, selected_date))
+    mesajlar = cur.fetchall()
 
-    gunluk_toplam = conn.execute('''
-        SELECT SUM(mesaj_sayisi) FROM messages
-        WHERE username = ? AND tarih = ?
-    ''', (username, selected_date)).fetchone()[0] or 0
-
+    cur.execute('SELECT SUM(mesaj_sayisi) FROM messages WHERE username = %s AND tarih = %s', (username, selected_date))
+    gunluk_toplam = cur.fetchone()['sum'] or 0
     gunluk_kazanc = gunluk_toplam * 0.15
 
-    tum_toplam = conn.execute('''
-        SELECT SUM(mesaj_sayisi) FROM messages
-        WHERE username = ?
-    ''', (username,)).fetchone()[0] or 0
+    cur.execute('SELECT SUM(mesaj_sayisi) FROM messages WHERE username = %s', (username,))
+    tum_toplam = cur.fetchone()['sum'] or 0
 
-    # Grafik verileri (Momaily & Liebesfun)
-    momaily_data = conn.execute('''
-        SELECT tarih, SUM(mesaj_sayisi) as toplam FROM messages
-        WHERE username = ? AND project = 'Momaily'
-        GROUP BY tarih ORDER BY tarih ASC
-    ''', (username,)).fetchall()
+    cur.execute('SELECT tarih, SUM(mesaj_sayisi) as toplam FROM messages WHERE username = %s AND project = %s GROUP BY tarih ORDER BY tarih ASC', (username, 'Momaily'))
+    momaily_data = cur.fetchall()
 
-    liebes_data = conn.execute('''
-        SELECT tarih, SUM(mesaj_sayisi) as toplam FROM messages
-        WHERE username = ? AND project = 'Liebesfun'
-        GROUP BY tarih ORDER BY tarih ASC
-    ''', (username,)).fetchall()
+    cur.execute('SELECT tarih, SUM(mesaj_sayisi) as toplam FROM messages WHERE username = %s AND project = %s GROUP BY tarih ORDER BY tarih ASC', (username, 'Liebesfun'))
+    liebes_data = cur.fetchall()
 
-    # Bugün herkesin toplam mesajı
     bugun = date.today().isoformat()
-    toplu_mesajlar = conn.execute('''
-        SELECT username, SUM(mesaj_sayisi) AS toplam
-        FROM messages
-        WHERE tarih = ?
-        GROUP BY username
-        ORDER BY toplam DESC
-    ''', (bugun,)).fetchall()
+    cur.execute('SELECT username, SUM(mesaj_sayisi) AS toplam FROM messages WHERE tarih = %s GROUP BY username ORDER BY toplam DESC', (bugun,))
+    toplu_mesajlar = cur.fetchall()
 
+    cur.close()
+    conn.close()
 
-
-    # Momaily mesajlı kullanıcılar
     try:
         with open("momaily_veri_gunluk.json", "r", encoding="utf-8") as f:
             momaily_json = json.load(f)
@@ -103,15 +86,12 @@ def dashboard():
     except:
         momaily_mesaj_olanlar = []
 
-    # Liebes mesajlı kullanıcılar
     try:
         with open("veri_gunluk.json", "r", encoding="utf-8") as f:
             liebes_json = json.load(f)
             liebes_mesaj_olanlar = liebes_json.get("mesaj_olanlar", [])
     except:
         liebes_mesaj_olanlar = []
-
-    conn.close()
 
     return render_template('dashboard.html',
                            username=username,
@@ -133,7 +113,8 @@ def admin_maaslar():
         return redirect(url_for('login'))
 
     conn = get_db_connection()
-    maaslar = conn.execute('''
+    maaslar = cur = conn.cursor()
+cur.execute('''
         SELECT * FROM salary_periods
         ORDER BY kapatma_tarihi DESC
     ''').fetchall()
@@ -196,25 +177,25 @@ def admin_dashboard():
 
     conn = get_db_connection()
 
-    # Toplam kullanıcı
-    toplam_kullanici = cur = conn.cursor()
-    cur.execute('SELECT COUNT(*) FROM users').fetchone()[0]
+    cur = conn.cursor()
+cur.execute('SELECT COUNT(*) FROM users')
+toplam_kullanici = cur.fetchone()[0]
 
-    # Toplam mesaj
-    toplam_mesaj = cur = conn.cursor()
-    cur.execute('SELECT SUM(mesaj_sayisi) FROM messages').fetchone()[0] or 0
+cur.execute('SELECT SUM(mesaj_sayisi) FROM messages')
+toplam_mesaj = cur.fetchone()[0] or 0
+
 
     # Toplam kazanç
     toplam_kazanc = toplam_mesaj * 0.15
 
     # En çok mesaj atan kullanıcı
-    top_user = conn.execute('''
+    top_user = cur.execute('''
         SELECT username, SUM(mesaj_sayisi) as toplam FROM messages
         GROUP BY username ORDER BY toplam DESC LIMIT 1
     ''').fetchone()
 
     # Günlük mesaj grafiği
-    gunluk_veriler = conn.execute('''
+    gunluk_veriler = cur.execute('''
         SELECT tarih, SUM(mesaj_sayisi) as toplam FROM messages
         GROUP BY tarih ORDER BY tarih ASC
     ''').fetchall()
@@ -243,28 +224,25 @@ def admin_kullanicilar():
             username = request.form['username']
             password = request.form['password']
             is_admin = 1 if request.form.get('is_admin') == 'on' else 0
-            cur = conn.cursor()
-            cur.execute(
-                'INSERT INTO users (username, password, is_admin) VALUES (%s, %s, %s)',
-                (username, password, is_admin)
-            )
+            cur.execute('INSERT INTO users (username, password, is_admin) VALUES (%s, ?, ?)',
+                         (username, password, is_admin))
             conn.commit()
 
         elif action == 'sil':
             user_id = request.form['user_id']
             cur = conn.cursor()
-            cur.execute('DELETE FROM users WHERE id = %s', (user_id,))
+cur.execute('DELETE FROM users WHERE id = %s', (user_id,))
             conn.commit()
 
         elif action == 'sifre_degistir':
             user_id = request.form['user_id']
             yeni_sifre = request.form['yeni_sifre']
             cur = conn.cursor()
-            cur.execute('UPDATE users SET password = %s WHERE id = %s', (yeni_sifre, user_id))
+cur.execute('UPDATE users SET password = %s WHERE id = %s', (yeni_sifre, user_id))
             conn.commit()
 
     kullanicilar = cur = conn.cursor()
-    cur.execute('SELECT * FROM users ORDER BY id ASC').fetchall()
+cur.execute('SELECT * FROM users ORDER BY id ASC').fetchall()
     conn.close()
     return render_template('admin_kullanicilar.html', kullanicilar=kullanicilar)
 
@@ -278,13 +256,12 @@ def announcements():
     conn = get_db_connection()
 
     # En son duyuruyu al
-    announcement = cur = conn.cursor()
-    cur.execute('SELECT * FROM announcements ORDER BY created_at DESC LIMIT 1').fetchone()
+    announcement = cur.execute('SELECT * FROM announcements ORDER BY created_at DESC LIMIT 1').fetchone()
 
     # Kullanıcı bu duyuruyu daha önce okudu mu?
     already_read = False
     if announcement:
-        read_check = conn.execute('SELECT * FROM announcement_reads WHERE username = ? AND announcement_id = ?',
+        read_check = cur.execute('SELECT * FROM announcement_reads WHERE username = %s AND announcement_id = %s',
                                   (session['username'], announcement['id'])).fetchone()
         if read_check:
             already_read = True
@@ -292,10 +269,8 @@ def announcements():
     # Duyuru okundu butonuna basıldıysa:
     if request.method == 'POST' and announcement and not already_read:
         cur = conn.cursor()
-        cur.execute(
-            'INSERT INTO announcement_reads (username, announcement_id) VALUES (%s, %s)',
-            (session['username'], announcement['id'])
-        )
+cur.execute('INSERT INTO announcement_reads (username, announcement_id) VALUES (%s, ?)',
+                     (session['username'], announcement['id']))
         conn.commit()
         already_read = True
 
@@ -316,19 +291,20 @@ def admin_duyurular():
         content = request.form['content']
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cur = conn.cursor()
-    cur.execute('INSERT INTO announcements (title, content, created_at) VALUES (%s, %s, %s)',
+cur.execute('INSERT INTO announcements (title, content, created_at) VALUES (%s, ?, ?)',
                      (title, content, now))
+        conn.commit()
 
     if request.args.get('sil'):
         duyuru_id = request.args.get('sil')
         cur = conn.cursor()
-        cur.execute('DELETE FROM announcements WHERE id = %s', (duyuru_id,))
+cur.execute('DELETE FROM announcements WHERE id = %s', (duyuru_id,))
         cur = conn.cursor()
-        cur.execute('DELETE FROM announcement_reads WHERE announcement_id = %s', (duyuru_id,))
+cur.execute('DELETE FROM announcement_reads WHERE announcement_id = %s', (duyuru_id,))
         conn.commit()
 
     duyurular = cur = conn.cursor()
-    cur.execute('SELECT * FROM announcements ORDER BY created_at DESC').fetchall()
+cur.execute('SELECT * FROM announcements ORDER BY created_at DESC').fetchall()
     conn.close()
     return render_template('admin_duyurular.html', duyurular=duyurular)
 
@@ -346,11 +322,8 @@ def mesaj_girisi():
         sayi = int(request.form['mesaj_sayisi'])
 
         conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute(
-            'INSERT INTO messages (username, project, tarih, mesaj_sayisi) VALUES (%s, %s, %s, %s)',
-            (session['username'], proje, tarih, sayi)
-        )
+        cur.execute('INSERT INTO messages (username, project, tarih, mesaj_sayisi) VALUES (%s, ?, ?, ?)',
+                     (session['username'], proje, tarih, sayi))
         conn.commit()
         conn.close()
         message = "✅ Mesaj başarıyla eklendi!"
@@ -369,18 +342,20 @@ def maas_kapatma():
         username = session['username']
 
         conn = get_db_connection()
-        toplam_mesaj = conn.execute('''
+        toplam_mesaj = cur = conn.cursor()
+cur.execute('''
             SELECT SUM(mesaj_sayisi) FROM messages
-            WHERE username = ? AND tarih BETWEEN ? AND ?
+            WHERE username = %s AND tarih BETWEEN ? AND ?
         ''', (username, baslangic, bitis)).fetchone()[0]
 
         toplam_mesaj = toplam_mesaj or 0
         kazanc = toplam_mesaj * 0.15
         kapatma_tarihi = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        conn.execute('''
+        cur = conn.cursor()
+cur.execute('''
             INSERT INTO salary_periods (username, baslangic, bitis, toplam_mesaj, kazanc, kapatma_tarihi)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, ?, ?, ?, ?, ?)
         ''', (username, baslangic, bitis, toplam_mesaj, kazanc, kapatma_tarihi))
         conn.commit()
         conn.close()
@@ -395,9 +370,10 @@ def maas_gecmisi():
         return redirect(url_for('login'))
 
     conn = get_db_connection()
-    maaslar = conn.execute('''
+    maaslar = cur = conn.cursor()
+cur.execute('''
         SELECT * FROM salary_periods
-        WHERE username = ?
+        WHERE username = %s
         ORDER BY kapatma_tarihi DESC
     ''', (session['username'],)).fetchall()
     conn.close()
@@ -416,13 +392,14 @@ def kullanici_chat():
         mesaj = request.form['mesaj']
         zaman = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cur = conn.cursor()
-    cur.execute('INSERT INTO admin_messages (gonderen, alici, mesaj, zaman) VALUES (%s, %s, %s, %s)',
-                (username, 'admin', mesaj, zaman))
-    conn.commit()
+cur.execute('INSERT INTO admin_messages (gonderen, alici, mesaj, zaman) VALUES (%s, ?, ?, ?)',
+                     (username, 'admin', mesaj, zaman))
+        conn.commit()
 
-    sohbet = conn.execute('''
+    sohbet = cur = conn.cursor()
+cur.execute('''
         SELECT * FROM admin_messages
-        WHERE gonderen = ? OR (alici = ? AND gonderen = 'admin')
+        WHERE gonderen = %s OR (alici = %s AND gonderen = 'admin')
         ORDER BY zaman ASC
     ''', (username, username)).fetchall()
 
@@ -442,20 +419,16 @@ def admin_chat():
 
     return render_template('admin_chat.html', sohbetler=sohbetler)
 
-
-
-
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
 
+
+
+
 if __name__ == '__main__':
     import os
-    port = int(os.environ.get('PORT', 5000))  # Render PORT verir, yoksa 5000 kullan
+    port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
 
-# Render'da data.db yoksa otomatik veritabanını kur
-import os
-if not os.path.exists("data.db"):
-    import veritabani
