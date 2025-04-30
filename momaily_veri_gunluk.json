@@ -1,0 +1,195 @@
+{
+  "top10": {
+    "evvelsi_gun": [
+      {
+        "isim": "1zu1-Sun-Cengizzz",
+        "coins": "4821 Coins"
+      },
+      {
+        "isim": "AkA-Hashus",
+        "coins": "2881 Coins"
+      },
+      {
+        "isim": "Novi-Pedro",
+        "coins": "2320 Coins"
+      },
+      {
+        "isim": "EMS-Sylvia",
+        "coins": "2268 Coins"
+      },
+      {
+        "isim": "AkA-Kursat",
+        "coins": "2153 Coins"
+      },
+      {
+        "isim": "AkA-ElonMusk",
+        "coins": "2075 Coins"
+      },
+      {
+        "isim": "1zu1-Sun-VGT",
+        "coins": "1635 Coins"
+      },
+      {
+        "isim": "1zu1-Sun-Freezyyy",
+        "coins": "1630 Coins"
+      },
+      {
+        "isim": "1zu1-Sun-Piaaa",
+        "coins": "1153 Coins"
+      },
+      {
+        "isim": "EMS-Andreas",
+        "coins": "888 Coins"
+      }
+    ],
+    "dun": [
+      {
+        "isim": "AkA-ElonMusk",
+        "coins": "5585 Coins"
+      },
+      {
+        "isim": "AkA-Hashus",
+        "coins": "3946 Coins"
+      },
+      {
+        "isim": "1zu1-Sun-Cengizzz",
+        "coins": "3283 Coins"
+      },
+      {
+        "isim": "AkA-Kursat",
+        "coins": "2725 Coins"
+      },
+      {
+        "isim": "EMS-Sylvia",
+        "coins": "2455 Coins"
+      },
+      {
+        "isim": "1zu1-Sun-Freezyyy",
+        "coins": "2120 Coins"
+      },
+      {
+        "isim": "1zu1-Sun-VGT",
+        "coins": "1815 Coins"
+      },
+      {
+        "isim": "Novi-Pedro",
+        "coins": "1190 Coins"
+      },
+      {
+        "isim": "1zu1-Sun-Markusss",
+        "coins": "1035 Coins"
+      },
+      {
+        "isim": "EMS-Andreas",
+        "coins": "963 Coins"
+      }
+    ],
+    "bugun": [
+      {
+        "isim": "1zu1-Sun-Cengizzz",
+        "coins": "1593 Coins"
+      },
+      {
+        "isim": "AkA-ElonMusk",
+        "coins": "1443 Coins"
+      },
+      {
+        "isim": "AkA-Kursat",
+        "coins": "983 Coins"
+      },
+      {
+        "isim": "1zu1-Sun-Freezyyy",
+        "coins": "690 Coins"
+      },
+      {
+        "isim": "Novi-Pedro",
+        "coins": "660 Coins"
+      },
+      {
+        "isim": "1zu1-Sun-VGT",
+        "coins": "585 Coins"
+      },
+      {
+        "isim": "EMS-Andreas",
+        "coins": "490 Coins"
+      },
+      {
+        "isim": "AkA-Hashus",
+        "coins": "430 Coins"
+      },
+      {
+        "isim": "EMS-Mirine",
+        "coins": "210 Coins"
+      },
+      {
+        "isim": "EMS-Joel",
+        "coins": "205 Coins"
+      }
+    ]
+  },
+  "ajanslar": [
+    {
+      "nick": "gesamt",
+      "coins_ges": 3009
+    },
+    {
+      "nick": "AkA-ElonMusk (NEW-T)",
+      "coins_ges": 1443
+    },
+    {
+      "nick": "AkA-Kursat (NEW)",
+      "coins_ges": 983
+    },
+    {
+      "nick": "AkA-Hashus (NEW-T)",
+      "coins_ges": 430
+    },
+    {
+      "nick": "AkA-Kaan (NEW-T)",
+      "coins_ges": 100
+    },
+    {
+      "nick": "AkA-Notarzt (NEW-T)",
+      "coins_ges": 23
+    },
+    {
+      "nick": "AkA-ForFay (NEW-T)",
+      "coins_ges": 20
+    },
+    {
+      "nick": "AkA-Pasa (NEW-T)",
+      "coins_ges": 10
+    }
+  ],
+  "mesaj_olanlar": [
+    {
+      "nick": "AkA-ElonMusk",
+      "mesaj": 9
+    },
+    {
+      "nick": "AkA-Faik",
+      "mesaj": 1
+    },
+    {
+      "nick": "AkA-ForFay",
+      "mesaj": 6
+    },
+    {
+      "nick": "AkA-Hashus",
+      "mesaj": 4
+    },
+    {
+      "nick": "AkA-Kaan",
+      "mesaj": 6
+    },
+    {
+      "nick": "AkA-Notarzt",
+      "mesaj": 2
+    },
+    {
+      "nick": "AkA-Poso",
+      "mesaj": 1
+    }
+  ],
+  "tarih": "2025-04-30 12:01:35"
+}
